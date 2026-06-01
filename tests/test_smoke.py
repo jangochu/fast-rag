@@ -7,11 +7,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from fast_rag.ingest import build_index
 from fast_rag.rag import load_retriever
 
 
-def test_ingest_then_retrieve(tmp_path: Path) -> None:
+def test_ingest_then_retrieve(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAST_RAG_PROVIDER", "ollama")
     data_dir = tmp_path / "data"
     index_dir = tmp_path / "idx"
     data_dir.mkdir()

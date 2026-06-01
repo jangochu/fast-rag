@@ -1,8 +1,9 @@
 # Fast-RAG
 
-一个**全本地、最小可运行**的 RAG (Retrieval-Augmented Generation) 演示工程。
-零 API key,零费用 — 用 sentence-transformers 做嵌入,FAISS 存向量,
-Ollama 在本机跑大语言模型。
+一个**最小可运行**的 RAG (Retrieval-Augmented Generation) 演示工程。
+默认全本地:sentence-transformers 嵌入 + FAISS 向量库 + Ollama 本地 LLM。
+也支持一键切换到阿里云**百炼 (DashScope)** 跑远程 LLM 与 Embedding,
+详见下方 **切换 Provider** 章节。
 
 ## 它做了什么
 
@@ -55,20 +56,68 @@ python -m fast_rag.cli ask "样例文档讲了什么?"
 
 ## 配置(环境变量)
 
-所有可调参数都在 `.env.example`,复制成 `.env` 后按需修改:
+所有可调参数都在 `.env.example`,复制成 `.env` 后按需修改。
+配置按 provider 分段;`FAST_RAG_PROVIDER` 主开关决定使用哪一套。
+
+**主开关**
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `FAST_RAG_EMBED_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | HuggingFace embedding 模型名 |
-| `FAST_RAG_LLM_MODEL` | `qwen2.5:7b` | Ollama 上的模型名 |
+| `FAST_RAG_PROVIDER` | `ollama` | `ollama`(本地) 或 `bailian`(阿里云百炼) |
+
+**Ollama 段(本地)**
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `FAST_RAG_OLLAMA_LLM` | `qwen2.5:7b` | Ollama 上的模型名 |
+| `FAST_RAG_OLLAMA_EMBED` | `paraphrase-multilingual-MiniLM-L12-v2` | HuggingFace embedding 模型名 |
 | `FAST_RAG_OLLAMA_URL` | `http://localhost:11434` | Ollama 服务地址 |
+| `HF_ENDPOINT` | (未设置) | HuggingFace 下载镜像,如 `https://hf-mirror.com` |
+
+**百炼 / DashScope 段(远程)**
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `DASHSCOPE_API_KEY` | (必填) | 阿里云百炼 API key,沿用官方约定 |
+| `FAST_RAG_BAILIAN_LLM` | `qwen-plus` | 百炼上的 LLM 模型名 |
+| `FAST_RAG_BAILIAN_EMBED` | `text-embedding-v3` | 百炼上的 embedding 模型名 |
+| `FAST_RAG_BAILIAN_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | OpenAI 兼容接口地址 |
+
+**公共段**
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
 | `FAST_RAG_CHUNK_SIZE` | `500` | 切片字符数 |
 | `FAST_RAG_CHUNK_OVERLAP` | `50` | 切片重叠字符数 |
 | `FAST_RAG_TOP_K` | `4` | 召回片段数量 |
-| `HF_ENDPOINT` | (未设置) | HuggingFace 下载镜像,如 `https://hf-mirror.com` |
 
 > 若 `huggingface.co` 不通(常见于国内网络),设置
 > `export HF_ENDPOINT=https://hf-mirror.com` 后重试。
+
+## 切换 Provider
+
+LLM 与 Embedding **联动切换**(不支持交叉组合)。索引目录会按 provider
+自动隔离到 `index/ollama/` 与 `index/bailian/`,切换无需手动清空。
+
+**用本地 Ollama(默认)**
+
+```bash
+export FAST_RAG_PROVIDER=ollama
+python -m fast_rag.cli ingest        # → index/ollama/
+python -m fast_rag.cli ask "..."
+```
+
+**用阿里云百炼**
+
+```bash
+export FAST_RAG_PROVIDER=bailian
+export DASHSCOPE_API_KEY=sk-xxxx
+python -m fast_rag.cli ingest        # → index/bailian/
+python -m fast_rag.cli ask "..."
+```
+
+> 不同 provider 的 embedding 维度不同,FAISS 索引本身不可跨 provider 复用,
+> 因此默认目录自动隔离;`--index-dir` 显式覆盖时不再派生。
 
 ## 命令参考
 
@@ -111,6 +160,8 @@ pytest -q
 | `索引未找到` | 先跑 `python -m fast_rag.cli ingest` |
 | `无法连接 Ollama` | 启动 `ollama serve` |
 | `模型 'xxx' 不存在` | 运行 `ollama pull <model>` |
+| `provider=bailian 需要设置环境变量 DASHSCOPE_API_KEY` | `export DASHSCOPE_API_KEY=sk-xxx` |
+| `百炼 API 调用失败: ...` | 查看原始异常信息(常见为鉴权失败 / 限流 / 网络) |
 | HuggingFace 下载失败/超时 | 设置 `HF_ENDPOINT=https://hf-mirror.com` 后重试 |
 
 ## 刻意不做(YAGNI)

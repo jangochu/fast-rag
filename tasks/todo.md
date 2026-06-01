@@ -143,4 +143,33 @@
 
 ## 评审 (实施后回写)
 
-> 留空
+### 实际改动
+
+- 阶段 A-F 全部按计划落地,未偏离设计
+- `Config` 拆为嵌套 `OllamaSettings` + `BailianSettings`,两套子配置始终读取
+- `providers/` 子包:`__init__.py` 工厂分派,`ollama.py` / `bailian.py` 各自封装
+- 百炼 LLM 与 embedding 都通过 `OpenAI 兼容接口` 连 DashScope,共用 `_require_api_key`
+- `cli.py` 默认 `index_dir = Path("index") / cfg.provider`,显式 `--index-dir` 覆盖派生
+- CLI 错误分支按 provider 分支:ollama 保留连接/模型缺失提示,bailian 加 `百炼 API 调用失败:` 前缀
+- `cmd_ingest` 与 `cmd_ask` 都拦截 `ValueError`(覆盖百炼缺 key 场景),exit 5
+
+### 已通过的本地验收
+
+- ✅ `pytest -q tests/test_providers.py` 3 个工厂用例全绿(不联网)
+- ✅ 五个模块 (`config`/`ingest`/`rag`/`cli`/`providers`) 全部 import 通过
+- ✅ `python -m fast_rag.cli --help` 与两个子命令 `--help` 完整
+- ✅ 删 `index/` 后 `ask` 报 "索引未找到 (index/ollama),请先运行 ..." (exit 2)
+- ✅ `FAST_RAG_PROVIDER=bailian` 无 key 时 `ingest` 报 "provider=bailian 需要设置环境变量 DASHSCOPE_API_KEY" (exit 5)
+- ✅ `ingest` 输出带 `[provider=xxx]` 前缀,索引目录自动派生为 `index/<provider>/`
+
+### 受网络限制未完成的验收
+
+- ⏸ smoke test `test_ingest_then_retrieve`:仍需下载 embedding 模型,沿用功能 1 限制
+- ⏸ 真跑 `FAST_RAG_PROVIDER=bailian ingest`:需有效 `DASHSCOPE_API_KEY` 且能连 dashscope.aliyuncs.com
+- ⏸ 真跑 ollama `ask`:除 embedding 外还需本地 Ollama + 模型
+
+### 与设计的偏差
+
+- 无功能性偏差
+- 实现细节:CLI 给 `cmd_ingest` 也加了 `ValueError` 分支(设计文档只提到 `cmd_ask`),
+  这样 ingest 阶段百炼缺 key 也走友好提示而非堆栈,语义一致更好

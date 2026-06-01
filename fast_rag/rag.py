@@ -1,4 +1,4 @@
-"""Load the FAISS index and run a retrieval-augmented chain via Ollama."""
+"""Load the FAISS index and run a retrieval-augmented chain via the configured provider."""
 
 from __future__ import annotations
 
@@ -8,10 +8,9 @@ from typing import Any
 from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
 
 from .config import Config
+from .providers import make_embeddings, make_llm
 
 PROMPT_TEMPLATE = """你是一个基于检索内容回答问题的助手。请严格根据下列上下文回答问题。
 如果上下文里没有答案,直接说"根据已有资料无法回答"。回答语言与问题保持一致。
@@ -26,7 +25,7 @@ PROMPT_TEMPLATE = """你是一个基于检索内容回答问题的助手。请�
 
 def load_vector_store(index_dir: Path | str, config: Config | None = None) -> FAISS:
     cfg = config or Config.from_env()
-    embeddings = HuggingFaceEmbeddings(model_name=cfg.embed_model)
+    embeddings = make_embeddings(cfg)
     return FAISS.load_local(
         str(index_dir),
         embeddings,
@@ -59,7 +58,7 @@ def answer(
     retriever = load_retriever(index_dir, k, cfg)
     docs = retriever.invoke(question)
 
-    llm = ChatOllama(model=cfg.llm_model, base_url=cfg.ollama_url)
+    llm = make_llm(cfg)
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     chain = prompt | llm | StrOutputParser()
     answer_text = chain.invoke(

@@ -7,10 +7,10 @@ from pathlib import Path
 
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from .config import Config
+from .providers import make_embeddings
 
 
 def build_index(
@@ -53,7 +53,7 @@ def build_index(
     )
     chunks = splitter.split_documents(documents)
 
-    embeddings = HuggingFaceEmbeddings(model_name=cfg.embed_model)
+    embeddings = make_embeddings(cfg)
     vector_store = FAISS.from_documents(chunks, embeddings)
     index_dir.mkdir(parents=True, exist_ok=True)
     vector_store.save_local(str(index_dir))
