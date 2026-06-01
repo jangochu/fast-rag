@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+
+# RAG index (rebuild via `python -m fast_rag.cli ingest`)
+index/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# HuggingFace / Torch model cache (usually under ~/.cache, but project-local just in case)
+.cache/
+hf_cache/
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
