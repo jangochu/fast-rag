@@ -9,6 +9,7 @@ dist/
 
 # Virtual environments
 .venv/
+.venv.bak/
 venv/
 env/
 
