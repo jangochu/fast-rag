@@ -27,6 +27,9 @@ index/
 .cache/
 hf_cache/
 
+# Locally-downloaded embedding models (point FAST_RAG_OLLAMA_EMBED here)
+models/
+
 # IDE
 .idea/
 .vscode/
