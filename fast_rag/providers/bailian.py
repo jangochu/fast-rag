@@ -30,4 +30,8 @@ def make_embeddings(cfg: Config) -> OpenAIEmbeddings:
         model=cfg.bailian.embed_model,
         api_key=api_key,
         base_url=cfg.bailian.base_url,
+        # DashScope expects raw strings; default OpenAI path sends tiktoken int arrays.
+        check_embedding_ctx_length=False,
+        # text-embedding-v3 caps single request at 25 inputs.
+        chunk_size=10,
     )
