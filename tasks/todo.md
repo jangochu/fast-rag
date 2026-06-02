@@ -162,14 +162,31 @@
 - ✅ `FAST_RAG_PROVIDER=bailian` 无 key 时 `ingest` 报 "provider=bailian 需要设置环境变量 DASHSCOPE_API_KEY" (exit 5)
 - ✅ `ingest` 输出带 `[provider=xxx]` 前缀,索引目录自动派生为 `index/<provider>/`
 
-### 受网络限制未完成的验收
+### 用户实跑后补的两处修复
 
-- ⏸ smoke test `test_ingest_then_retrieve`:仍需下载 embedding 模型,沿用功能 1 限制
-- ⏸ 真跑 `FAST_RAG_PROVIDER=bailian ingest`:需有效 `DASHSCOPE_API_KEY` 且能连 dashscope.aliyuncs.com
-- ⏸ 真跑 ollama `ask`:除 embedding 外还需本地 Ollama + 模型
+实施完成后用户在真路径上跑出两个问题,均已热修:
+
+1. **百炼 embedding 报 `contents is neither str nor list of str`** (3e208c0)
+   - 根因: `langchain-openai` 默认 `check_embedding_ctx_length=True`,
+     用 tiktoken 把文本编码成整数 token 数组再 POST(OpenAI 自家接口支持),
+     DashScope 兼容接口只认 `str` / `list[str]`
+   - 修: `providers/bailian.py` 关 `check_embedding_ctx_length`,
+     并把 `chunk_size=10` 控制在 v3 单次 25 条上限内
+
+2. **macOS 启动 abort: `OMP: Error #15 libomp already initialized`** (2cd4675)
+   - 根因: faiss-cpu 与 torch (经 sentence-transformers) 各自静态链接
+     `libomp.dylib`,在同进程加载时 OpenMP 二次初始化 abort
+   - 修: `fast_rag/__init__.py` 包入口设 `KMP_DUPLICATE_LIB_OK=TRUE`
+     (必须在子模块 import torch/faiss 之前);
+     `providers/__init__.py` 改 importlib 懒加载,bailian 路径不再 import HF
 
 ### 与设计的偏差
 
 - 无功能性偏差
-- 实现细节:CLI 给 `cmd_ingest` 也加了 `ValueError` 分支(设计文档只提到 `cmd_ask`),
-  这样 ingest 阶段百炼缺 key 也走友好提示而非堆栈,语义一致更好
+- CLI 给 `cmd_ingest` 也加了 `ValueError` 分支(设计文档只提到 `cmd_ask`),
+  这样 ingest 阶段百炼缺 key 也走友好提示而非堆栈
+- 设计未覆盖 macOS libomp 双重初始化问题,在包入口安静兜底
+
+### 仍未真跑的项
+
+- ⏸ smoke test `test_ingest_then_retrieve`:沿用功能 1 的 HF 网络限制
