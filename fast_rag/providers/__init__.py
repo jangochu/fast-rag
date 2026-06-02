@@ -1,33 +1,36 @@
-"""Provider factories: dispatch LLM and Embedding construction by Config.provider."""
+"""Provider factories: dispatch LLM and Embedding construction by Config.provider.
+
+Providers are lazy-imported so e.g. choosing bailian never pulls torch/sentence-transformers.
+"""
 
 from __future__ import annotations
 
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseChatModel
+import importlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain_core.embeddings import Embeddings
+    from langchain_core.language_models import BaseChatModel
 
 from fast_rag.config import Config
 
-from . import bailian, ollama
+_SUPPORTED = ("ollama", "bailian")
 
 
-def make_llm(cfg: Config) -> BaseChatModel:
-    if cfg.provider == "ollama":
-        return ollama.make_llm(cfg)
-    if cfg.provider == "bailian":
-        return bailian.make_llm(cfg)
-    raise ValueError(
-        f"未知 provider: {cfg.provider!r}(支持 ollama / bailian)"
-    )
+def _load(provider: str):
+    if provider not in _SUPPORTED:
+        raise ValueError(
+            f"未知 provider: {provider!r}(支持 {' / '.join(_SUPPORTED)})"
+        )
+    return importlib.import_module(f"fast_rag.providers.{provider}")
 
 
-def make_embeddings(cfg: Config) -> Embeddings:
-    if cfg.provider == "ollama":
-        return ollama.make_embeddings(cfg)
-    if cfg.provider == "bailian":
-        return bailian.make_embeddings(cfg)
-    raise ValueError(
-        f"未知 provider: {cfg.provider!r}(支持 ollama / bailian)"
-    )
+def make_llm(cfg: Config) -> "BaseChatModel":
+    return _load(cfg.provider).make_llm(cfg)
+
+
+def make_embeddings(cfg: Config) -> "Embeddings":
+    return _load(cfg.provider).make_embeddings(cfg)
 
 
 __all__ = ["make_llm", "make_embeddings"]

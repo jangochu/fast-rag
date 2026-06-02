@@ -163,6 +163,7 @@ pytest -q
 | `provider=bailian 需要设置环境变量 DASHSCOPE_API_KEY` | `export DASHSCOPE_API_KEY=sk-xxx` |
 | `百炼 API 调用失败: ...` | 查看原始异常信息(常见为鉴权失败 / 限流 / 网络) |
 | HuggingFace 下载失败/超时 | 设置 `HF_ENDPOINT=https://hf-mirror.com` 后重试 |
+| macOS `OMP: Error #15: Initializing libomp.dylib...` | 包初始化已自动设 `KMP_DUPLICATE_LIB_OK=TRUE`;若仍报错请确认是从 `python -m fast_rag.cli` 入口启动 |
 
 ## 刻意不做(YAGNI)
 
